@@ -18,14 +18,16 @@
 # export PKT_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/opt/curl/lib/pkgconfig
 # export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/opt/jpeg-turbo/lib/pkgconfig
 
-project('ezquake', 'c')
+project('ezquake', 'c',
+	default_options : 'default_library=static'
+)
 
 deps = [
-	dependency('expat'),
-	dependency('jansson'),
+	subproject('expat').get_variable('expat_dep'),
+	subproject('jansson').get_variable('jansson_dep'),
 	dependency('libcurl'),
-	dependency('libpcre'),
-	dependency('sdl2'),
+	subproject('pcre').get_variable('pcre_dep'),
+	subproject('sdl2').get_variable('sdl2_dep'),
 	dependency('threads'),
 	meson.get_compiler('c').find_library('dl', required : false),
 	meson.get_compiler('c').find_library('m', required : false),
@@ -54,20 +56,12 @@ if meson.get_compiler('c').has_argument('-msse2')
 	c_args += '-msse2'
 endif
 
-png = dependency('libpng', required : false)
-if png.found()
-	deps += png
-	c_args += '-DWITH_PNG'
-	if png.version() >= '1.4.0'
-		c_args += '-D__Q_PNG14__'
-	endif
-endif
+deps += subproject('libpng').get_variable('png_dep')
+c_args += '-DWITH_PNG'
+c_args += '-D__Q_PNG14__'
 
-jpeg = dependency('libjpeg', required : false)
-if jpeg.found()
-	deps += jpeg
-	c_args += '-DWITH_JPEG'
-endif
+deps += subproject('libjpeg').get_variable('jpeg_dep')
+c_args += '-DWITH_JPEG'
 
 speex = dependency('speex', required : false)
 speexdsp = dependency('speexdsp', required : false)
@@ -86,11 +80,8 @@ endif
 #	c_args += '-DWITH_OGG_VORBIS'
 #endif
 
-zlib = dependency('zlib', required : false)
-if zlib.found()
-	deps += zlib
-	c_args += '-DWITH_ZLIB'
-endif
+deps += subproject('zlib').get_variable('zlib_dep')
+c_args += '-DWITH_ZLIB'
 
 sources = [
 	'cl_cam.c',
@@ -325,7 +316,7 @@ else # Otherwise assume a roughly POSIX compliant OS with X11.
 		'localtime_posix.c',
 		'sys_posix.c',
 	]
-	c_args += '-DX11_GAMMA_WORKAROUND'
+#	c_args += '-DX11_GAMMA_WORKAROUND'
 endif
 
 executable('ezquake-' + host_machine.system() + '-' + host_machine.cpu(), sources,
