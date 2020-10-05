@@ -1,99 +1,19 @@
-# See http://mesonbuild.com/ for more details.
-#
-# $ meson --buildtype=release build
-# $ ninja -C build
+project('ezquake', 'c',
+	default_options : [
+		'default_library=static',
+	],
+)
 
-# For Windows:
-#
-# Compile environment should be MSYS2 (http://www.msys2.org/)
-# with a MinGW compiler.
-
-# For macOS (homebrew):
-#
-# Some homebrew packages are not symlinked ("keg-only") to prevent
-# interfering with system libraries. So we have to expclicitly list
-# them for pkg-config.
-#
-# export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/opt/expat/lib/pkgconfig
-# export PKT_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/opt/curl/lib/pkgconfig
-# export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/opt/jpeg-turbo/lib/pkgconfig
-
-project('ezquake', 'c')
-
-deps = [
-	dependency('expat'),
-	dependency('jansson'),
-	dependency('libcurl'),
-	dependency('libpcre'),
-	dependency('sdl2'),
-	dependency('threads'),
-	meson.get_compiler('c').find_library('dl', required : false),
-	meson.get_compiler('c').find_library('m', required : false),
-]
-
-ver = find_program(meson.source_root() + '/version.sh')
+ver = find_program(join_paths(meson.source_root(), 'version.sh'))
 
 version = run_command(ver, '--version')
 revision = run_command(ver, '--revision')
 
-c_args = [
-	'-DREVISION=' + revision.stdout().strip(),
-	'-DVERSION="' + version.stdout().strip() + '"',
-	'-DNDEBUG',
-	'-DJSS_CAM',
-	'-DUSE_PR2',
-	'-DWITH_NQPROGS',
-	'-DUSE_SDL2',
-	'-DWITH_ZIP',
-	'-Wno-strict-aliasing',
-	'-Wno-int-to-pointer-cast',
-	'-Wno-pointer-to-int-cast',
-]
-
-if meson.get_compiler('c').has_argument('-msse2')
-	c_args += '-msse2'
-endif
-
-png = dependency('libpng', required : false)
-if png.found()
-	deps += png
-	c_args += '-DWITH_PNG'
-	if png.version() >= '1.4.0'
-		c_args += '-D__Q_PNG14__'
-	endif
-endif
-
-jpeg = dependency('libjpeg', required : false)
-if jpeg.found()
-	deps += jpeg
-	c_args += '-DWITH_JPEG'
-endif
-
-speex = dependency('speex', required : false)
-speexdsp = dependency('speexdsp', required : false)
-if speex.found() and speexdsp.found()
-	deps += [
-		speex,
-		speexdsp
-	]
-	c_args += '-DWITH_SPEEX'
-endif
-
-#vorbis = dependency('vorbisfile', required : false)
-#if vorbis.found()
-#	deps += vorbis
-# crashed on a quick test
-#	c_args += '-DWITH_OGG_VORBIS'
-#endif
-
-zlib = dependency('zlib', required : false)
-if zlib.found()
-	deps += zlib
-	c_args += '-DWITH_ZLIB'
-endif
-
 sources = [
 	'central.c',
+#	'cd_linux.c',
+	'cd_null.c',
+#	'cd_win.c', TODO:remove
 	'cl_cam.c',
 	'cl_cmd.c',
 	'cl_demo.c',
@@ -105,6 +25,7 @@ sources = [
 	'cl_parse.c',
 	'cl_pred.c',
 	'cl_screen.c',
+	'cl_screenshot.c',
 	'cl_skygroups.c',
 	'cl_slist.c',
 	'cl_tent.c',
@@ -139,47 +60,112 @@ sources = [
 	'ez_label.c',
 	'ez_listview.c',
 	'ez_listviewitem.c',
+	'ezquake-icon.c',
 	'ez_scrollbar.c',
 	'ez_scrollpane.c',
 	'ez_slider.c',
 	'ez_window.c',
 	'fchecks.c',
 	'fmod.c',
+	'fonts.c',
 	'fragstats.c',
 	'fs.c',
-	'gl_bloom.c',
-	'gl_draw.c',
+	'gl_aliasmodel.c',
+	'gl_aliasmodel_md3.c',
+	'gl_buffers.c',
+	'glc_aliasmodel.c',
+	'glc_aliasmodel_mesh.c',
+	'glc_bloom.c',
+	'glc_brushmodel.c',
+	'glc_draw.c',
+	'glc_fog.c',
+	'glc_framebuffer.c',
+	'glc_lightmaps.c',
+	'glc_main.c',
+	'glc_matrix.c',
+	'glc_md3.c',
+	'glc_misc.c',
+	'glc_particles.c',
+	'glc_performance.c',
+	'glc_sdl.c',
+	'glc_sky.c',
+	'glc_sprite3d.c',
+	'glc_state.c',
+	'glc_surf.c',
+	'glc_turb_surface.c',
+	'glc_vao.c',
+	'glc_warp.c',
+	'gl_debug.c',
+	'gl_drawcall_wrappers.c',
 	'gl_framebuffer.c',
-	'gl_md3.c',
-	'gl_mesh.c',
-	'gl_model.c',
-	'gl_ngraph.c',
-	'gl_refrag.c',
-	'gl_rlight.c',
-	'gl_rmain.c',
-	'gl_rmisc.c',
-	'gl_rpart.c',
-	'gl_rsurf.c',
+	'glm_aliasmodel.c',
+	'glm_brushmodel.c',
+	'glm_draw.c',
+	'glm_framebuffer.c',
+	'gl_misc.c',
+	'glm_lightmaps.c',
+	'glm_main.c',
+	'glm_md3.c',
+	'glm_misc.c',
+	'glm_particles.c',
+	'glm_performance.c',
+	'glm_rmain.c',
+	'glm_rsurf.c',
+	'glm_sdl.c',
+	'glm_sprite3d.c',
+	'glm_sprite.c',
+	'glm_state.c',
+	'glm_texture_arrays.c',
+	'glm_vao.c',
+	'gl_program.c',
+	'gl_sdl.c',
+	'gl_sprite3d.c',
+	'gl_state.c',
 	'gl_texture.c',
-	'gl_warp.c',
+	'gl_texture_functions.c',
 	'hash.c',
 	'help.c',
 	'help_files.c',
 	'host.c',
+	'hud_262.c',
+	'hud_ammo.c',
+	'hud_armor.c',
+	'hud_autoid.c',
 	'hud.c',
+	'hud_centerprint.c',
+	'hud_clock.c',
 	'hud_common.c',
 	'hud_editor.c',
+	'hud_face.c',
+	'hud_frags.c',
+	'hud_gamesummary.c',
+	'hud_groups.c',
+	'hud_guns.c',
+	'hud_health.c',
+	'hud_items.c',
+	'hud_net.c',
+	'hud_performance.c',
+	'hud_qtv.c',
 	'hud_radar.c',
+	'hud_scores.c',
+	'hud_speed.c',
+	'hud_teaminfo.c',
+	'hud_tracking.c',
 	'hud_weapon_stats.c',
 	'ignore.c',
 	'image.c',
+#	'in_osx.c',
 	'in_sdl2.c',
 	'irc.c',
 	'irc_filter.c',
 	'keys.c',
+	'linux_signals.c',
+#	'localtime.c',
+	'localtime_posix.c',
+#	'localtime_win.c',
 	'logging.c',
 	'match_tools.c',
-	'match_tools_challenge.o',
+	'match_tools_challenge.c',
 	'mathlib.c',
 	'md4.c',
 	'menu.c',
@@ -188,6 +174,7 @@ sources = [
 	'menu_multiplayer.c',
 	'menu_options.c',
 	'menu_proxy.c',
+#	'movie_avi.c',
 	'movie.c',
 	'mvd_autotrack.c',
 	'mvd_utils.c',
@@ -206,7 +193,52 @@ sources = [
 	'pr_exec.c',
 	'q_shared.c',
 	'qtv.c',
+	'r_aliasmodel.c',
+	'r_aliasmodel_md3.c',
+	'r_aliasmodel_mesh.c',
+	'r_aliasmodel_skins.c',
+	'r_atlas.c',
+	'r_bloom.c',
+	'r_brushmodel_bspx.c',
+	'r_brushmodel.c',
+	'r_brushmodel_load.c',
+	'r_brushmodel_sky.c',
+	'r_brushmodel_surfaces.c',
+	'r_brushmodel_textures.c',
+	'r_brushmodel_warpsurfaces.c',
+	'r_buffers.c',
+	'r_chaticons.c',
+	'r_draw.c',
+	'r_draw_charset.c',
+	'r_draw_circle.c',
+	'r_draw_image.c',
+	'r_draw_line.c',
+	'r_draw_polygon.c',
+	'r_hud.c',
+	'r_lightmaps.c',
+	'r_main.c',
+	'r_matrix.c',
+	'r_misc.c',
+	'r_model.c',
+	'r_netgraph.c',
+	'r_palette.c',
 	'r_part.c',
+	'r_particles_qmb.c',
+	'r_particles_qmb_spawn.c',
+	'r_particles_qmb_trails.c',
+	'r_part_trails.c',
+	'r_performance.c',
+	'r_refrag.c',
+	'r_rlight.c',
+	'r_rmain.c',
+	'r_rmisc.c',
+	'r_sprite3d.c',
+	'r_sprites.c',
+	'r_states.c',
+	'r_texture.c',
+	'r_texture_cvars.c',
+	'r_texture_load.c',
+	'r_texture_util.c',
 	'rulesets.c',
 	'sbar.c',
 	'settings_page.c',
@@ -233,11 +265,13 @@ sources = [
 	'sv_phys.c',
 	'sv_save.c',
 	'sv_send.c',
-#	'sv_sys_unix.c',
-#	'sv_sys_win.c'
+#	'sv_sys_unix.c', TODO:remove
+#	'sv_sys_win.c', TODO:remove
 	'sv_user.c',
 	'sv_world.c',
+	'sys_posix.c',
 	'sys_sdl2.c',
+#	'sys_win.c',
 	'teamplay.c',
 	'teamplay_locfiles.c',
 	'textencoding.c',
@@ -255,127 +289,47 @@ sources = [
 	'vfs_zip.c',
 	'vid_common_gl.c',
 	'vid_sdl2.c',
+	'vid_vsync.c',
+	'vk_blending.c',
+	'vk_buffers.c',
+	'vk_debug.c',
+	'vk_draw.c',
+	'vk_graphics_pipeline.c',
+	'vk_instance.c',
+	'vk_lightmaps.c',
+	'vk_main.c',
+	'vk_md3.c',
+	'vk_misc.c',
+	'vk_physical_devices.c',
+	'vk_renderpass.c',
+	'vk_sdl.c',
+	'vk_swapchain.c',
+	'vk_vao.c',
+	'vk_window_surface.c',
 	'vx_camera.c',
 	'vx_coronas.c',
+#	'vx_motiontrail.c',
 	'vx_stuff.c',
 	'vx_tracker.c',
 	'vx_vertexlights.c',
 	'wad.c',
 	'xsd.c',
-	'xsd_command.c',
 	'xsd_document.c',
-	'xsd_variable.c',
-	'zone.c',
-]
-
-includes = []
-minizip = dependency('minizip', required : false)
-if minizip.found()
-	deps += minizip
-else
-	sources += [
-		'minizip/ioapi.c',
-		'minizip/unzip.c',
-	]
-	includes += include_directories('minizip')
-endif
-
-# meag: extra source files for renderer update
-sources += [
-	'hud_262.o',
-	'hud_speed.o',
-	'hud_teaminfo.o',
-	'gl_draw_charset.o',
-	'vid_vsync.o',
-	'gl_aliasmodel.o',
-	'gl_aliasmodel_skins.o',
-	'gl_atlas.o',
-	'gl_brushmodel.o',
-	'gl_brushmodel_bspx.o',
-	'gl_brushmodel_textures.o',
-	'gl_buffers.o',
-	'gl_chaticons.o',
-	'gl_framebuffer.o',
-	'gl_lightmaps.o',
-	'gl_matrix.o',
-	'gl_state.o',
-	'gl_state_resets.o',
-	'gl_state_resets_2d.o',
-	'gl_state_resets_entities.o',
-	'gl_state_resets_sky.o',
-	'gl_state_resets_world.o',
-	'gl_sky.o',
-	'gl_sprites.o',
-	'gl_vbo.o',
-	'glc_aliasmodel.o',
-	'glc_brushmodel.o',
-	'glc_md3.o',
-	'glc_misc.o',
-	'glc_screen.o',
-	'glc_sky.o',
-	'glc_sprite3d.o',
-	'glc_surf.o',
-	'glc_turb_surface.o',
-	'glc_warp.o',
-	'glm_aliasmodel.o',
-	'gl_sprite3d.o',
-	'glm_brushmodel.o',
-	'glm_md3.o',
-	'glm_misc.o',
-	'glm_program.o',
-	'glm_rsurf.o',
-	'glm_screen.o',
-	'glm_sprite.o',
-	'glm_texture_arrays.o',
-	'glm_draw.o',
-	'glm_draw_charset.o',
-	'glm_draw_circle.o',
-	'glm_draw_image.o',
-	'glm_draw_line.o',
-	'glm_draw_polygon.o',
-	'glm_rmain.o',
-	'r_performance.o',
-	'glm_framebuffer.o',
-	'glm_texture.o',
-	'gl_drawcall_wrappers.o',
-	'gl_debug.o',
-	'hud_autoid.o',
-	'cl_screenshot.o',
-	'gl_rpart_spawn.o',
-	'hud_clock.o',
-	'hud_ammo.o',
-	'hud_items.o',
-	'hud_mp3.o',
-	'hud_net.o',
-	'hud_guns.o',
-	'hud_groups.o',
-	'hud_armor.o',
-	'hud_health.o',
-	'hud_gamesummary.o',
-	'hud_face.o',
-	'hud_frags.o',
-	'hud_tracking.o',
-	'hud_scores.o',
-	'hud_performance.o',
-	'hud_centerprint.o',
-	'hud_qtv.o',
-	'fonts.o'
+	'zone.c'
 ]
 
 awk = find_program('awk')
 od = find_program('od')
-gen = generator(find_program(meson.source_root() + '/json2c.sh'),
+gen = generator(find_program(join_paths(meson.source_root(), 'json2c.sh')),
 	output : '@BASENAME@.c',
 	arguments : ['@INPUT@', '@OUTPUT@']
 )
 sources += gen.process(
+	'help_cmdline_params.json',
 	'help_commands.json',
+	'help_macros.json',
 	'help_variables.json',
-)
 
-# meag: change this to 'all .glsl files in directory'
-# (https://github.com/mesonbuild/meson/blob/master/docs/markdown/FAQ.md#but-i-really-want-to-use-wildcards)
-sources += gen.process(
 	'glsl/common.glsl',
 	'glsl/constants.glsl',
 	'glsl/draw_aliasmodel.fragment.glsl',
@@ -384,61 +338,89 @@ sources += gen.process(
 	'glsl/draw_sprites.vertex.glsl',
 	'glsl/draw_world.fragment.glsl',
 	'glsl/draw_world.vertex.glsl',
+	'glsl/fx_world_geometry.fragment.glsl',
+	'glsl/fx_world_geometry.vertex.glsl',
 	'glsl/hud_draw_circle.fragment.glsl',
 	'glsl/hud_draw_circle.vertex.glsl',
 	'glsl/hud_draw_image.fragment.glsl',
+	'glsl/hud_draw_image.geometry.glsl',
 	'glsl/hud_draw_image.vertex.glsl',
 	'glsl/hud_draw_line.fragment.glsl',
 	'glsl/hud_draw_line.vertex.glsl',
 	'glsl/hud_draw_polygon.fragment.glsl',
 	'glsl/hud_draw_polygon.vertex.glsl',
 	'glsl/lighting.compute.glsl',
+	'glsl/lighting_copy.compute.glsl',
 	'glsl/post_process_screen.fragment.glsl',
-	'glsl/post_process_screen.vertex.glsl'
+	'glsl/post_process_screen.vertex.glsl',
+
+	'glsl/glc/glc_aliasmodel_shadow.fragment.glsl',
+	'glsl/glc/glc_aliasmodel_shadow.vertex.glsl',
+	'glsl/glc/glc_aliasmodel_shell.fragment.glsl',
+	'glsl/glc/glc_aliasmodel_shell.vertex.glsl',
+	'glsl/glc/glc_aliasmodel_std.fragment.glsl',
+	'glsl/glc/glc_aliasmodel_std.vertex.glsl',
+	'glsl/glc/glc_caustics.fragment.glsl',
+	'glsl/glc/glc_caustics.vertex.glsl',
+	'glsl/glc/glc_draw_sprites.fragment.glsl',
+	'glsl/glc/glc_draw_sprites.vertex.glsl',
+	'glsl/glc/glc_hud_images.fragment.glsl',
+	'glsl/glc/glc_hud_images.vertex.glsl',
+	'glsl/glc/glc_post_process_screen.fragment.glsl',
+	'glsl/glc/glc_post_process_screen.vertex.glsl',
+	'glsl/glc/glc_sky.fragment.glsl',
+	'glsl/glc/glc_sky.vertex.glsl',
+	'glsl/glc/glc_turbsurface.fragment.glsl',
+	'glsl/glc/glc_turbsurface.vertex.glsl',
+	'glsl/glc/glc_world_drawflat.fragment.glsl',
+	'glsl/glc/glc_world_drawflat.vertex.glsl',
+	'glsl/glc/glc_world_secondpass.fragment.glsl',
+	'glsl/glc/glc_world_secondpass.vertex.glsl',
+	'glsl/glc/glc_world_textured.fragment.glsl',
+	'glsl/glc/glc_world_textured.vertex.glsl',
 )
 
-link_args = []
+cmake = import('cmake')
 
-if host_machine.system() == 'windows'
-	sources += [
-		'cd_null.c',
-		'localtime_win.c',
-		'movie_avi.c',
-		'sys_win.c',
-	]
-	deps += meson.get_compiler('c').find_library('opengl32')
-	deps += meson.get_compiler('c').find_library('ws2_32')
-	deps += meson.get_compiler('c').find_library('comctl32')
-	deps += meson.get_compiler('c').find_library('winmm')
-elif host_machine.system() == 'darwin'
-	add_languages('objc')
-	sources += [
-		'cd_null.c',
-		'in_osx.c',
-		'localtime_posix.c',
-		'sys_osx.m',
-		'sys_posix.c',
-	]
-	link_args = [
-		'-Wl,-framework,AppKit',
-		'-Wl,-framework,IOKit',
-		'-Wl,-framework,OpenGL',
-	]
-else # Otherwise assume a roughly POSIX compliant OS with X11.
-	deps += dependency('gl')
-	deps += dependency('xxf86vm')
-	sources += [
-		'cd_linux.c',
-		'linux_signals.c',
-		'localtime_posix.c',
-		'sys_posix.c',
-	]
-	c_args += '-DX11_GAMMA_WORKAROUND'
-endif
+opt_var = cmake.subproject_options()
+opt_var.add_cmake_defines({'BUILD_PROGRAMS': false})
 
-executable('ezquake-' + host_machine.system() + '-' + host_machine.cpu(), sources,
-	dependencies : deps,
-	include_directories : includes,
-	c_args : c_args,
-	link_args : link_args,
+minizip_lib = static_library('minizip',
+	'minizip/ioapi.c',
+	'minizip/unzip.c',
+	include_directories : include_directories('minizip'),
+)
+minizip_dep = declare_dependency(
+	link_with : minizip_lib,
+	include_directories : include_directories('minizip'),
+)
+
+executable('ezquake', sources,
+	c_args : [
+		'-DRENDERER_OPTION_CLASSIC_OPENGL',
+	#	'-DRENDERER_OPTION_MODERN_OPENGL',
+		'-DREVISION=' + revision.stdout().strip(),
+		'-DVERSION="' + version.stdout().strip() + '"',
+		'-DNDEBUG', '-DJSS_CAM', '-DUSE_PR2', '-DWITH_NQPROGS',
+		'-DWITH_ZIP',
+		'-DWITH_PNG', '-D__Q_PNG14__', '-DWITH_ZLIB',
+		'-DWITH_JPEG',
+	],
+	dependencies : [
+	#	subproject('sdl2').get_variable('sdl2_dep'),
+		dependency('sdl2'),
+		minizip_dep,
+		subproject('libpng').get_variable('png_dep'),
+		subproject('zlib').get_variable('zlib_dep'),
+		subproject('libjpeg').get_variable('jpeg_dep'),
+		subproject('expat').get_variable('expat_dep'),
+		subproject('pcre').get_variable('pcre_dep'),
+		dependency('libcurl'),
+		subproject('jansson').get_variable('jansson_dep'),
+		cmake.subproject('libsndfile', options : opt_var).dependency('sndfile'),
+		dependency('gl'),
+		dependency('threads'),
+		meson.get_compiler('c').find_library('m', required : false),
+		meson.get_compiler('c').find_library('dl', required : false),
+	],
 )
