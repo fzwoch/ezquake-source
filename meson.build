@@ -1,38 +1,60 @@
-# See http://mesonbuild.com/ for more details.
-#
-# $ meson --buildtype=release build
-# $ ninja -C build
+project('ezquake', 'c',
+	default_options : [
+		'default_library=static',
+		'b_ndebug=if-release',
+	],
+)
 
-# For Windows:
-#
-# Compile environment should be MSYS2 (http://www.msys2.org/)
-# with a MinGW compiler.
+if meson.get_compiler('c').has_argument('-avx2')
+	add_global_arguments('-avx2', language : 'c')
+endif
 
-# For macOS (homebrew):
-#
-# Some homebrew packages are not symlinked ("keg-only") to prevent
-# interfering with system libraries. So we have to expclicitly list
-# them for pkg-config.
-#
-# export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/opt/expat/lib/pkgconfig
-# export PKT_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/opt/curl/lib/pkgconfig
-# export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/opt/jpeg-turbo/lib/pkgconfig
+cmake = import('cmake')
 
-project('ezquake', 'c')
+curl_opts = cmake.subproject_options()
+curl_opts.add_cmake_defines(
+	{'BUILD_SHARED_LIBS' : false},
+	{'CURL_DISABLE_CRYPTO_AUTH' : true},
+	{'CMAKE_USE_OPENSSL' : false},
+)
+
+sndfile_opts = cmake.subproject_options()
+sndfile_opts.add_cmake_defines(
+	{'BUILD_PROGRAMS' : false},
+	{'ENABLE_EXTERNAL_LIBS' : false},
+)
+
+sdl_opts = cmake.subproject_options()
+sdl_opts.add_cmake_defines(
+	{'BUILD_SHARED_LIBS' : false},
+)
+
+jpeg_opts = cmake.subproject_options()
+jpeg_opts.add_cmake_defines(
+	{'ENABLE_SHARED' : false},
+)
+
+png_opts = cmake.subproject_options()
+png_opts.add_cmake_defines(
+	{'PNG_SHARED' : false},
+)
 
 deps = [
-	dependency('expat'),
-	dependency('jansson'),
-	dependency('libcurl'),
-	dependency('libpcre'),
-	dependency('sdl2'),
+	subproject('expat').get_variable('expat_dep'),
+	cmake.subproject('curl', options : curl_opts).dependency('libcurl'),
 	dependency('threads'),
-	dependency('sndfile'),
+	cmake.subproject('zlib').dependency('zlibstatic'),
+	cmake.subproject('pcre').dependency('pcre'),
+	cmake.subproject('libpng', options : png_opts).dependency('png_static'),
+	cmake.subproject('jansson').dependency('jansson'),
+	cmake.subproject('libjpeg-turbo', options : jpeg_opts).dependency('turbojpeg-static'),
+	cmake.subproject('SDL', options : sdl_opts).dependency('SDL2-static'),
+	cmake.subproject('libsndfile', options : sndfile_opts).dependency('sndfile'),
 	meson.get_compiler('c').find_library('dl', required : false),
 	meson.get_compiler('c').find_library('m', required : false),
 ]
 
-ver = find_program(meson.source_root() + '/version.sh')
+ver = find_program(join_paths(meson.source_root(), 'version.sh'))
 
 version = run_command(ver, '--version')
 revision = run_command(ver, '--revision')
@@ -40,58 +62,20 @@ revision = run_command(ver, '--revision')
 c_args = [
 	'-DREVISION=' + revision.stdout().strip(),
 	'-DVERSION="' + version.stdout().strip() + '"',
-	'-DNDEBUG',
 	'-DJSS_CAM',
 	'-DUSE_PR2',
 	'-DWITH_NQPROGS',
 	'-DUSE_SDL2',
 	'-DWITH_ZIP',
+	'-DWITH_PNG', '-D__Q_PNG14__',
+	'-DWITH_JPEG',
+	'-DWITH_ZLIB',
+	'-DRENDERER_OPTION_CLASSIC_OPENGL',
+	'-DRENDERER_OPTION_MODERN_OPENGL',
 	'-Wno-strict-aliasing',
 	'-Wno-int-to-pointer-cast',
 	'-Wno-pointer-to-int-cast',
 ]
-
-if meson.get_compiler('c').has_argument('-msse2')
-	c_args += '-msse2'
-endif
-
-png = dependency('libpng', required : false)
-if png.found()
-	deps += png
-	c_args += '-DWITH_PNG'
-	if png.version() >= '1.4.0'
-		c_args += '-D__Q_PNG14__'
-	endif
-endif
-
-jpeg = dependency('libjpeg', required : false)
-if jpeg.found()
-	deps += jpeg
-	c_args += '-DWITH_JPEG'
-endif
-
-speex = dependency('speex', required : false)
-speexdsp = dependency('speexdsp', required : false)
-if speex.found() and speexdsp.found()
-	deps += [
-		speex,
-		speexdsp
-	]
-	c_args += '-DWITH_SPEEX'
-endif
-
-#vorbis = dependency('vorbisfile', required : false)
-#if vorbis.found()
-#	deps += vorbis
-# crashed on a quick test
-#	c_args += '-DWITH_OGG_VORBIS'
-#endif
-
-zlib = dependency('zlib', required : false)
-if zlib.found()
-	deps += zlib
-	c_args += '-DWITH_ZLIB'
-endif
 
 sources = [
 	'central.c',
@@ -251,17 +235,11 @@ sources = [
 	'zone.c',
 ]
 
-includes = []
-minizip = dependency('minizip', required : false)
-if minizip.found()
-	deps += minizip
-else
-	sources += [
-		'minizip/ioapi.c',
-		'minizip/unzip.c',
-	]
-	includes += include_directories('minizip')
-endif
+sources += [
+	'minizip/ioapi.c',
+	'minizip/unzip.c',
+]
+includes = include_directories('minizip')
 
 # OpenGL (common)
 sources += [
@@ -414,12 +392,13 @@ sources += [
 	'fonts.c'
 ]
 
-awk = find_program('awk')
-od = find_program('od')
-gen = generator(find_program(meson.source_root() + '/json2c.sh'),
+find_program('awk')
+find_program('od')
+gen = generator(find_program(join_paths(meson.source_root(), 'json2c.sh')),
 	output : '@BASENAME@.c',
 	arguments : ['@INPUT@', '@OUTPUT@']
 )
+
 sources += gen.process(
 	'help_commands.json',
 	'help_variables.json',
@@ -482,8 +461,6 @@ sources += gen.process(
 	'glsl/glc/glc_world_textured.vertex.glsl',
 )
 
-link_args = []
-
 if host_machine.system() == 'windows'
 	sources += [
 		'cd_null.c',
@@ -504,28 +481,23 @@ elif host_machine.system() == 'darwin'
 		'sys_osx.m',
 		'sys_posix.c',
 	]
-	link_args = [
-		'-Wl,-framework,AppKit',
-		'-Wl,-framework,IOKit',
-		'-Wl,-framework,OpenGL',
-	]
+	deps += dependency('appkit', modules : 'foundation')
+	deps += dependency('iokit', modules : 'foundation')
+	deps += dependency('opengl', modules : 'foundation')
 else # Otherwise assume a roughly POSIX compliant OS with X11.
 	deps += dependency('gl')
-	deps += dependency('xxf86vm')
+#	deps += dependency('xxf86vm')
 	sources += [
 		'cd_linux.c',
 		'linux_signals.c',
 		'localtime_posix.c',
 		'sys_posix.c',
 	]
-	c_args += '-DX11_GAMMA_WORKAROUND'
+#	c_args += '-DX11_GAMMA_WORKAROUND'
 endif
-
-c_args += ['-DRENDERER_OPTION_CLASSIC_OPENGL', '-DRENDERER_OPTION_MODERN_OPENGL']
 
 executable('ezquake-' + host_machine.system() + '-' + host_machine.cpu(), sources,
 	dependencies : deps,
 	include_directories : includes,
 	c_args : c_args,
-	link_args : link_args,
 )

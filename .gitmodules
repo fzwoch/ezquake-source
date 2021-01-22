@@ -1,0 +1,24 @@
+[submodule "subprojects/libsndfile"]
+	path = subprojects/libsndfile
+	url = https://github.com/libsndfile/libsndfile.git
+[submodule "subprojects/SDL"]
+	path = subprojects/SDL
+	url = https://github.com/SDL-mirror/SDL.git
+[submodule "subprojects/libjpeg-turbo"]
+	path = subprojects/libjpeg-turbo
+	url = https://github.com/libjpeg-turbo/libjpeg-turbo.git
+[submodule "subprojects/jansson"]
+	path = subprojects/jansson
+	url = https://github.com/akheron/jansson.git
+[submodule "subprojects/libpng"]
+	path = subprojects/libpng
+	url = https://github.com/glennrp/libpng.git
+[submodule "subprojects/pcre"]
+	path = subprojects/pcre
+	url = https://github.com/jwilk-mirrors/pcre.git
+[submodule "subprojects/zlib"]
+	path = subprojects/zlib
+	url = https://github.com/madler/zlib.git
+[submodule "subprojects/curl"]
+	path = subprojects/curl
+	url = https://github.com/curl/curl.git
